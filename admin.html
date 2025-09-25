@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Waitlist - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #6366f1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .users-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .table-header {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .table-header h2 {
+            color: #1e293b;
+            font-size: 1.5rem;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+        
+        .no-data {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-header {
+                padding: 1rem;
+            }
+            
+            table {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-users"></i> App Waitlist</h1>
+            <p>Track users who are waiting for your app</p>
+        </div>
+        
+        <div class="stats" id="statsContainer">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+        
+        <div class="users-table">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <h2><i class="fas fa-list"></i> Registered Users</h2>
+                    <button class="export-btn" id="exportBtn" onclick="exportData()">
+                        <i class="fas fa-download"></i>
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-hashtag"></i> #</th>
+                            <th><i class="fas fa-user"></i> Name</th>
+                            <th><i class="fas fa-envelope"></i> Email</th>
+                            <th><i class="fas fa-phone"></i> Phone</th>
+                            <th><i class="fas fa-calendar"></i> Registered</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="empty-state no-data" id="emptyState">
+                <i class="fas fa-inbox"></i>
+                <h3>No users registered yet</h3>
+                <p>Users will appear here once they submit the waitlist form</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load and display waitlist data
+        function loadWaitlistData() {
+            const waitlistData = JSON.parse(localStorage.getItem('appWaitlist') || '[]');
+            const usersTableBody = document.getElementById('usersTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const statsContainer = document.getElementById('statsContainer');
+            
+            if (waitlistData.length === 0) {
+                document.querySelector('table').style.display = 'none';
+                emptyState.classList.remove('no-data');
+                statsContainer.innerHTML = '<div class="stat-card"><div class="stat-number">0</div><div>Total Users</div></div>';
+                return;
+            }
+            
+            // Show table and hide empty state
+            document.querySelector('table').style.display = 'table';
+            emptyState.classList.add('no-data');
+            
+            // Populate stats
+            const totalUsers = waitlistData.length;
+            const todayUsers = waitlistData.filter(user => {
+                const userDate = new Date(user.timestamp);
+                const today = new Date();
+                return userDate.toDateString() === today.toDateString();
+            }).length;
+            
+            const weekUsers = waitlistData.filter(user => {
+                const userDate = new Date(user.timestamp);
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return userDate >= weekAgo;
+            }).length;
+            
+            const phoneUsers = waitlistData.filter(user => user.phone && user.phone.trim() !== '').length;
+            
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalUsers}</div>
+                    <div>Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${todayUsers}</div>
+                    <div>Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${weekUsers}</div>
+                    <div>This Week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${phoneUsers}</div>
+                    <div>With Phone</div>
+                </div>
+            `;
+            
+            // Populate table
+            usersTableBody.innerHTML = '';
+            waitlistData.forEach((user, index) => {
+                const row = document.createElement('tr');
+                const registeredDate = new Date(user.timestamp).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${user.name}</strong></td>
+                    <td>${user.email}</td>
+                    <td>${user.phone || 'N/A'}</td>
+                    <td>${registeredDate}</td>
+                `;
+                
+                usersTableBody.appendChild(row);
+            });
+        }
+        
+        // Export data as CSV
+        function exportData() {
+            const waitlistData = JSON.parse(localStorage.getItem('appWaitlist') || '[]');
+            
+            if (waitlistData.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Name', 'Email', 'Phone', 'Registered Date'];
+            const csvContent = [
+                headers.join(','),
+                ...waitlistData.map(user => [
+                    `"${user.name}"`,
+                    `"${user.email}"`,
+                    `"${user.phone || ''}"`,
+                    `"${new Date(user.timestamp).toLocaleString()}"`
+                ].join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `app-waitlist-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Auto-refresh data every 30 seconds
+        setInterval(loadWaitlistData, 30000);
+        
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadWaitlistData);
+        
+        // Add refresh button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add refresh button to header
+            const header = document.querySelector('.header');
+            const refreshBtn = document.createElement('button');
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+            refreshBtn.style.cssText = `
+                background: rgba(255,255,255,0.2);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.3);
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                margin-top: 1rem;
+                transition: all 0.3s ease;
+            `;
+            refreshBtn.onmouseover = () => refreshBtn.style.background = 'rgba(255,255,255,0.3)';
+            refreshBtn.onmouseout = () => refreshBtn.style.background = 'rgba(255,255,255,0.2)';
+            refreshBtn.onclick = loadWaitlistData;
+            header.appendChild(refreshBtn);
+        });
+    </script>
+</body>
+</html>
